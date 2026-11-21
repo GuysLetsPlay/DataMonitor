@@ -33,6 +33,19 @@
     <string name="label_last_week">Last 7 days</string>
     <string name="label_last_two_weeks">Last 14 days</string>
     <string name="label_calendar_month">Calendar month</string>
+    <string name="home_range_week">7 days</string>
+    <string name="home_range_two_weeks">14 days</string>
+    <string name="home_range_month">Month</string>
+    <string name="home_scope_all">Mobile + Wi-Fi</string>
+    <string name="home_selected_total_loading">Selected period total: …</string>
+    <string name="home_selected_total">%1$s · %2$s total</string>
+    <string name="home_enable_sim_selection">Grant permission for SIM choices</string>
+    <string name="home_sim_usage_note">Android 10 and newer may limit SIM-specific totals. If blocked, the total falls back to all SIMs.</string>
+    <string-array name="home_usage_scopes">
+        <item>@string/home_scope_all</item>
+        <item>@string/label_mobile_data</item>
+        <item>@string/label_wifi</item>
+    </string-array>
     <string name="export_usage_csv">Export CSV</string>
     <string name="export_usage_filename">data-usage.csv</string>
     <string name="title_data_sim">Mobile SIM</string>

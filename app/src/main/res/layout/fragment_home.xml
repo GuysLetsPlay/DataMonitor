@@ -417,6 +417,100 @@
 
                 </LinearLayout>
 
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/home_timeframe_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/margin_mid_large"
+                    android:layout_marginTop="@dimen/margin_large"
+                    android:layout_marginEnd="@dimen/margin_mid_large"
+                    app:singleSelection="true"
+                    app:selectionRequired="true"
+                    app:layout_constraintTop_toBottomOf="@id/textView2">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/home_timeframe_week"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_default"
+                        android:checked="true"
+                        android:text="@string/home_range_week"
+                        app:chipCornerRadius="@dimen/radius_large"
+                        app:chipStrokeWidth="0dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/home_timeframe_two_weeks"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_default"
+                        android:text="@string/home_range_two_weeks"
+                        app:chipCornerRadius="@dimen/radius_large"
+                        app:chipStrokeWidth="0dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/home_timeframe_month"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_default"
+                        android:text="@string/home_range_month"
+                        app:chipCornerRadius="@dimen/radius_large"
+                        app:chipStrokeWidth="0dp" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <LinearLayout
+                    android:id="@+id/home_usage_filters"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/margin_mid_large"
+                    android:layout_marginTop="@dimen/margin_small"
+                    android:layout_marginEnd="@dimen/margin_mid_large"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    app:layout_constraintTop_toBottomOf="@id/home_timeframe_group">
+
+                    <Spinner
+                        android:id="@+id/home_usage_scope"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/button_default"
+                        android:layout_weight="1" />
+
+                    <Spinner
+                        android:id="@+id/home_usage_sim"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/button_default"
+                        android:layout_marginStart="@dimen/margin_small"
+                        android:layout_weight="1" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/home_selected_usage_total"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/margin_mid_large"
+                    android:layout_marginTop="@dimen/margin_small"
+                    android:layout_marginEnd="@dimen/margin_mid_large"
+                    android:padding="@dimen/margin_medium"
+                    android:background="@drawable/banner_background"
+                    android:text="@string/home_selected_total_loading"
+                    android:textAppearance="@style/TextAppearance.AppCompat.Title"
+                    app:layout_constraintTop_toBottomOf="@id/home_usage_filters"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <TextView
+                    android:id="@+id/home_sim_usage_note"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/margin_mid_large"
+                    android:layout_marginEnd="@dimen/margin_mid_large"
+                    android:text="@string/home_sim_usage_note"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_extra_small"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toBottomOf="@id/home_selected_usage_total"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
                 <TextView
                     android:id="@+id/overview_load_error"
                     android:layout_width="wrap_content"
@@ -432,7 +526,7 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintHorizontal_bias="0.5"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/textView2" />
+                    app:layout_constraintTop_toBottomOf="@+id/home_sim_usage_note" />
 
                 <include
                     android:id="@+id/overview"
@@ -445,7 +539,7 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintHorizontal_bias="0.5"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/textView2" />
+                    app:layout_constraintTop_toBottomOf="@+id/home_sim_usage_note" />
 
                 <include
                     android:id="@+id/overview_loading"

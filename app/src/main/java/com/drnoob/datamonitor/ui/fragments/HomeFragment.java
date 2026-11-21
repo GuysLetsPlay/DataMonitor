@@ -44,6 +44,9 @@ import static com.drnoob.datamonitor.core.Values.DATA_USAGE_TYPE;
 import static com.drnoob.datamonitor.core.Values.GENERAL_FRAGMENT_ID;
 import static com.drnoob.datamonitor.core.Values.SESSION_CUSTOM;
 import static com.drnoob.datamonitor.core.Values.SESSION_MONTHLY;
+import static com.drnoob.datamonitor.core.Values.SESSION_LAST_WEEK;
+import static com.drnoob.datamonitor.core.Values.SESSION_LAST_TWO_WEEKS;
+import static com.drnoob.datamonitor.core.Values.SESSION_CALENDAR_MONTH;
 import static com.drnoob.datamonitor.core.Values.SESSION_TODAY;
 import static com.drnoob.datamonitor.core.Values.SHOW_ADD_PLAN_BANNER;
 import static com.drnoob.datamonitor.core.Values.TYPE_MOBILE_DATA;
@@ -58,10 +61,12 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.Manifest;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -75,13 +80,20 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
+import android.widget.Spinner;
 import android.widget.TextView;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
+import android.os.Build;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
@@ -95,8 +107,10 @@ import com.drnoob.datamonitor.adapters.data.OverviewModel;
 import com.drnoob.datamonitor.ui.activities.ContainerActivity;
 import com.drnoob.datamonitor.utils.NotificationService;
 import com.drnoob.datamonitor.utils.SmartDataAllocationService;
+import com.drnoob.datamonitor.utils.NetworkStatsHelper;
 import com.drnoob.datamonitor.utils.VibrationUtils;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.snackbar.Snackbar;
 import com.skydoves.progressview.ProgressView;
 
@@ -140,6 +154,13 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
     private ActivityResultLauncher<Intent> dataPlanLauncher;
     private ConstraintLayout mPlanDetailsView;
     private TextView mPlanDetailsTitle, mPlanUsage, mPlanValidity, mDailyQuota;
+    private TextView mSelectedUsageTotal;
+    private TextView mHomeSimUsageNote;
+    private Spinner mUsageScope, mUsageSim;
+    private int selectedHomeSession = SESSION_LAST_WEEK;
+    private int selectedHomeScope = 0;
+    private final List<Integer> homeSubscriptionIds = new ArrayList<>();
+    private ActivityResultLauncher<String> homePhonePermissionLauncher;
 
     private SharedPreferences preferences;
 
@@ -195,6 +216,12 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
                     }
                 }
         );
+        homePhonePermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(), granted -> {
+                    if (granted) populateHomeSims();
+                    else if (isAdded()) android.widget.Toast.makeText(requireContext(),
+                            R.string.sim_permission_required, android.widget.Toast.LENGTH_LONG).show();
+                });
 
         preferences = PreferenceManager.getDefaultSharedPreferences(requireContext());
     }
@@ -229,6 +256,11 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         mPlanUsage = view.findViewById(R.id.plan_usage_details);
         mPlanValidity = view.findViewById(R.id.plan_validity_details);
         mDailyQuota = view.findViewById(R.id.daily_quota);
+        mSelectedUsageTotal = view.findViewById(R.id.home_selected_usage_total);
+        mHomeSimUsageNote = view.findViewById(R.id.home_sim_usage_note);
+        mUsageScope = view.findViewById(R.id.home_usage_scope);
+        mUsageSim = view.findViewById(R.id.home_usage_sim);
+        setupHomeUsageFilters(view);
 
         mOverview = view.findViewById(R.id.overview);
         mOverviewLoading = view.findViewById(R.id.overview_loading);
@@ -615,6 +647,125 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         super.onResume();
         updateData();
         updateDataBalance();
+        updateSelectedUsageTotal();
+    }
+
+    private void setupHomeUsageFilters(View view) {
+        ArrayAdapter<CharSequence> scopeAdapter = ArrayAdapter.createFromResource(requireContext(),
+                R.array.home_usage_scopes, android.R.layout.simple_spinner_item);
+        scopeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mUsageScope.setAdapter(scopeAdapter);
+        int savedScope = preferences.getInt("home_usage_scope", 0);
+        mUsageScope.setSelection(savedScope);
+        populateHomeSims();
+
+        ChipGroup timeframeGroup = view.findViewById(R.id.home_timeframe_group);
+        timeframeGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            int id = group.getCheckedChipId();
+            selectedHomeSession = id == R.id.home_timeframe_month ? SESSION_CALENDAR_MONTH
+                    : id == R.id.home_timeframe_two_weeks ? SESSION_LAST_TWO_WEEKS : SESSION_LAST_WEEK;
+            updateSelectedUsageTotal();
+        });
+        mUsageScope.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View row, int position, long id) {
+                selectedHomeScope = position;
+                preferences.edit().putInt("home_usage_scope", position).apply();
+                updateSelectedUsageTotal();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        });
+        mUsageSim.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View row, int position, long id) {
+                if (position < homeSubscriptionIds.size()) {
+                    NetworkStatsHelper.setSelectedSubscription(requireContext(), homeSubscriptionIds.get(position));
+                    updateSelectedUsageTotal();
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    homePhonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE);
+                }
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        });
+    }
+
+    private void populateHomeSims() {
+        if (mUsageSim == null || !isAdded()) return;
+        homeSubscriptionIds.clear();
+        List<String> labels = new ArrayList<>();
+        homeSubscriptionIds.add(-1);
+        labels.add(getString(R.string.label_all_sims));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_PHONE_STATE)
+                != PackageManager.PERMISSION_GRANTED) {
+            homeSubscriptionIds.add(-2);
+            labels.add(getString(R.string.home_enable_sim_selection));
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
+                    android.R.layout.simple_spinner_item, labels);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            mUsageSim.setAdapter(adapter);
+            return;
+        }
+        try {
+            SubscriptionManager manager = (SubscriptionManager) requireContext()
+                    .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+            List<SubscriptionInfo> active = manager.getActiveSubscriptionInfoList();
+            if (active != null) {
+                for (SubscriptionInfo info : active) {
+                    CharSequence name = info.getDisplayName();
+                    labels.add(name == null || name.length() == 0
+                            ? getString(R.string.label_sim_slot, info.getSimSlotIndex() + 1) : name.toString());
+                    homeSubscriptionIds.add(info.getSubscriptionId());
+                }
+            }
+        } catch (SecurityException ignored) { }
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_item, labels);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mUsageSim.setAdapter(adapter);
+        int selected = preferences.getInt(NetworkStatsHelper.PREF_DATA_USAGE_SUBSCRIPTION, -1);
+        int position = homeSubscriptionIds.indexOf(selected);
+        mUsageSim.setSelection(Math.max(position, 0));
+    }
+
+    private void updateSelectedUsageTotal() {
+        if (mSelectedUsageTotal == null || !isAdded()) return;
+        if (mHomeSimUsageNote != null) {
+            boolean simSelected = preferences.getInt(NetworkStatsHelper.PREF_DATA_USAGE_SUBSCRIPTION, -1) >= 0;
+            mHomeSimUsageNote.setVisibility(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && simSelected
+                    ? View.VISIBLE : View.GONE);
+        }
+        mSelectedUsageTotal.setText(R.string.home_selected_total_loading);
+        final int session = selectedHomeSession;
+        final int scope = selectedHomeScope;
+        final Context context = requireContext().getApplicationContext();
+        final int resetDate = preferences.getInt(DATA_RESET_DATE, 1);
+        new AsyncTask<Void, Void, Long>() {
+            @Override protected Long doInBackground(Void... values) {
+                long total = 0;
+                try {
+                    if (scope != 2) {
+                        total += getDeviceMobileDataUsage(context, session, resetDate)[2];
+                    }
+                    if (scope != 1) {
+                        total += getDeviceWifiDataUsage(context, session)[2];
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Unable to load selected period usage", e);
+                }
+                return total;
+            }
+            @Override protected void onPostExecute(Long total) {
+                if (!isAdded() || mSelectedUsageTotal == null) return;
+                if (selectedHomeSession != session || selectedHomeScope != scope) return;
+                String range = session == SESSION_CALENDAR_MONTH
+                        ? getString(R.string.home_range_month)
+                        : session == SESSION_LAST_TWO_WEEKS
+                        ? getString(R.string.home_range_two_weeks) : getString(R.string.home_range_week);
+                String scopeLabel = getString(scope == 1 ? R.string.label_mobile_data
+                        : scope == 2 ? R.string.label_wifi : R.string.home_scope_all);
+                mSelectedUsageTotal.setText(getString(R.string.home_selected_total,
+                        range + " · " + scopeLabel, formatData(total / 2, total / 2)[2]));
+            }
+        }.execute();
     }
 
     @Override

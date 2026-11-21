@@ -112,6 +112,10 @@ public class NetworkStatsHelper {
         }
     }
 
+    private static String getWifiSubscriberId(Context context) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? null : getSubscriberId(context);
+    }
+
     public static void setSelectedSubscription(Context context, int subscriptionId) {
         PreferenceManager.getDefaultSharedPreferences(context).edit()
                 .putInt(PREF_DATA_USAGE_SUBSCRIPTION, subscriptionId).apply();
@@ -151,7 +155,7 @@ public class NetworkStatsHelper {
         NetworkStats.Bucket bucket = new NetworkStats.Bucket();
 
         bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI,
-                getSubscriberId(context),
+                getWifiSubscriberId(context),
                 resetTimeMillis,
                 endTimeMillis);
 
@@ -270,7 +274,7 @@ public class NetworkStatsHelper {
         NetworkStats.Bucket bucket = new NetworkStats.Bucket();
 
         NetworkStats networkStats = networkStatsManager.querySummary(ConnectivityManager.TYPE_WIFI,
-                getSubscriberId(context),
+                getWifiSubscriberId(context),
                 resetTimeMillis,
                 endTimeMillis);
 
@@ -370,7 +374,7 @@ public class NetworkStatsHelper {
 
         networkStats = networkStatsManager
                 .querySummary(ConnectivityManager.TYPE_WIFI,
-                        getSubscriberId(context),
+                        getWifiSubscriberId(context),
                         resetTimeMillis,
                         endTimeMillis);
 
@@ -520,7 +524,7 @@ public class NetworkStatsHelper {
             totalMobile = ((sentMobile + receivedMobile) / 1024) / 1024;
 
             wifiBucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI,
-                    getSubscriberId(context),
+                    getWifiSubscriberId(context),
                     resetTimeMillis,
                     endTimeMillis);
 
@@ -622,7 +626,7 @@ public class NetworkStatsHelper {
         Long endTimeMillis = getTimePeriod(context, session, 1)[1];
 
         networkStats = networkStatsManager.querySummary(ConnectivityManager.TYPE_WIFI,
-                getSubscriberId(context),
+                getWifiSubscriberId(context),
                 resetTimeMillis,
                 endTimeMillis);
 
