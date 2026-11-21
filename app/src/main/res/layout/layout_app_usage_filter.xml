@@ -84,6 +84,36 @@
                 app:chipBackgroundColor="@color/bottom_sheet_chip_selector" />
 
             <com.google.android.material.chip.Chip
+                android:id="@+id/session_last_week"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/button_default"
+                android:text="@string/label_last_week"
+                app:chipCornerRadius="@dimen/radius_large"
+                app:chipStrokeWidth="0dp"
+                app:chipBackgroundColor="@color/bottom_sheet_chip_selector" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/session_last_two_weeks"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/button_default"
+                android:text="@string/label_last_two_weeks"
+                app:chipCornerRadius="@dimen/radius_large"
+                app:chipStrokeWidth="0dp"
+                app:chipBackgroundColor="@color/bottom_sheet_chip_selector" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/session_calendar_month"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/button_default"
+                android:text="@string/label_calendar_month"
+                app:chipCornerRadius="@dimen/radius_large"
+                app:chipStrokeWidth="0dp"
+                app:chipBackgroundColor="@color/bottom_sheet_chip_selector" />
+
+            <com.google.android.material.chip.Chip
                 android:id="@+id/session_this_month"
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
@@ -144,6 +174,28 @@
                 app:chipBackgroundColor="@color/bottom_sheet_chip_selector"/>
 
         </com.google.android.material.chip.ChipGroup>
+
+        <TextView
+            android:id="@+id/sim_group_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/margin_large"
+            android:layout_marginStart="@dimen/margin_mid_large"
+            android:text="@string/title_data_sim"
+            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/type_group" />
+
+        <Spinner
+            android:id="@+id/sim_selector"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_default"
+            android:layout_marginStart="@dimen/margin_mid_large"
+            android:layout_marginEnd="@dimen/margin_mid_large"
+            android:layout_marginTop="@dimen/margin_small"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/sim_group_title" />
 
 <!--        <com.google.android.material.button.MaterialButton-->
 <!--            android:id="@+id/custom_session"-->
@@ -212,7 +264,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.5"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/type_group" />
+            app:layout_constraintTop_toBottomOf="@+id/sim_selector" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

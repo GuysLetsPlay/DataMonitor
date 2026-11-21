@@ -9,6 +9,14 @@
 <img src="https://raw.githubusercontent.com/itsdrnoob/DataMonitor/master/images/icon.png" width="20%" height="20%"></img>
 
 # Data Monitor
+## GuysLetsPlay fork: data usage options
+
+This fork adds 7-day and 14-day ranges, a calendar-month range, a SIM selector, and CSV export from the app usage screen. Existing custom date ranges, billing month, all-SIM mobile data, and Wi-Fi views remain available.
+
+The SIM selector needs Android phone permission. Android 10 and newer restrict per-SIM subscriber statistics to system and carrier apps on many devices; when the device blocks that access, use All SIMs. The app's total mobile view uses Android's device-wide mobile usage counters.
+
+Download the latest APK from [Releases](https://github.com/GuysLetsPlay/DataMonitor/releases/latest). This fork builds a debug-signed APK with GitHub Actions. Android may ask you to allow installation from your browser or file manager.
+
 Track all your data usage - at one place
 </div>
 

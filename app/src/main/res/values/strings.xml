@@ -30,6 +30,16 @@
     <string name="label_today">Today</string>
     <string name="label_yesterday">Yesterday</string>
     <string name="label_this_month">This month</string>
+    <string name="label_last_week">Last 7 days</string>
+    <string name="label_last_two_weeks">Last 14 days</string>
+    <string name="label_calendar_month">Calendar month</string>
+    <string name="export_usage_csv">Export CSV</string>
+    <string name="export_usage_filename">data-usage.csv</string>
+    <string name="title_data_sim">Mobile SIM</string>
+    <string name="label_all_sims">All SIMs</string>
+    <string name="label_sim_slot">SIM %1$d</string>
+    <string name="sim_permission_required">Phone permission is needed to read usage for one SIM. Showing all SIMs.</string>
+    <string name="sim_stats_android_restriction">Android restricts SIM-level usage to system or carrier apps on this version. The total includes all SIMs.</string>
     <string name="label_last_month">Last month</string>
     <string name="label_this_year">This year</string>
     <string name="label_all_time">All time</string>

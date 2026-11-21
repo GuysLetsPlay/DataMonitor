@@ -35,6 +35,9 @@ import static com.drnoob.datamonitor.core.Values.SESSION_ALL_TIME;
 import static com.drnoob.datamonitor.core.Values.SESSION_CUSTOM;
 import static com.drnoob.datamonitor.core.Values.SESSION_CUSTOM_FILTER;
 import static com.drnoob.datamonitor.core.Values.SESSION_LAST_MONTH;
+import static com.drnoob.datamonitor.core.Values.SESSION_LAST_WEEK;
+import static com.drnoob.datamonitor.core.Values.SESSION_LAST_TWO_WEEKS;
+import static com.drnoob.datamonitor.core.Values.SESSION_CALENDAR_MONTH;
 import static com.drnoob.datamonitor.core.Values.SESSION_MONTHLY;
 import static com.drnoob.datamonitor.core.Values.SESSION_THIS_MONTH;
 import static com.drnoob.datamonitor.core.Values.SESSION_THIS_YEAR;
@@ -50,6 +53,7 @@ import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.RemoteException;
 import android.telephony.TelephonyManager;
+import android.telephony.SubscriptionManager;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -77,10 +81,22 @@ import java.util.List;
 
 public class NetworkStatsHelper {
     private static final String TAG = NetworkStatsHelper.class.getSimpleName();
+    public static final String PREF_DATA_USAGE_SUBSCRIPTION = "data_usage_subscription";
     private static Gson gson = new Gson();
     private static Type type = new TypeToken<List<AppModel>>() {}.getType();
 
     public static String getSubscriberId(Context context) {
+        int selectedSubscription = PreferenceManager.getDefaultSharedPreferences(context)
+                .getInt(PREF_DATA_USAGE_SUBSCRIPTION, -1);
+        if (selectedSubscription >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            try {
+                TelephonyManager manager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+                return manager.createForSubscriptionId(selectedSubscription).getSubscriberId();
+            } catch (Exception e) {
+                Log.w(TAG, "Unable to read selected SIM subscriber ID", e);
+                return null;
+            }
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
             String subscriberId = "";
@@ -94,6 +110,11 @@ public class NetworkStatsHelper {
         } else {
             return null;
         }
+    }
+
+    public static void setSelectedSubscription(Context context, int subscriptionId) {
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
+                .putInt(PREF_DATA_USAGE_SUBSCRIPTION, subscriptionId).apply();
     }
 
     public static Long[] getDeviceWifiDataUsage(Context context, int session) throws ParseException, RemoteException {
@@ -693,6 +714,29 @@ public class NetworkStatsHelper {
                 calendar.add(Calendar.DATE, 1);
 //                endTimeMillis = calendar.getTimeInMillis();
 //                endTimeMillis = System.currentTimeMillis();
+                break;
+
+            case SESSION_LAST_WEEK:
+            case SESSION_LAST_TWO_WEEKS:
+                calendar = Calendar.getInstance();
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                calendar.add(Calendar.DAY_OF_YEAR, session == SESSION_LAST_WEEK ? -6 : -13);
+                resetTimeMillis = calendar.getTimeInMillis();
+                endTimeMillis = System.currentTimeMillis();
+                break;
+
+            case SESSION_CALENDAR_MONTH:
+                calendar = Calendar.getInstance();
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                resetTimeMillis = calendar.getTimeInMillis();
+                endTimeMillis = System.currentTimeMillis();
                 break;
 
             case SESSION_YESTERDAY:

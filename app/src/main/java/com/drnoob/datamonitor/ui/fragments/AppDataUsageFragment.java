@@ -34,6 +34,9 @@ import static com.drnoob.datamonitor.core.Values.SESSION_ALL_TIME;
 import static com.drnoob.datamonitor.core.Values.SESSION_CUSTOM;
 import static com.drnoob.datamonitor.core.Values.SESSION_CUSTOM_FILTER;
 import static com.drnoob.datamonitor.core.Values.SESSION_LAST_MONTH;
+import static com.drnoob.datamonitor.core.Values.SESSION_LAST_WEEK;
+import static com.drnoob.datamonitor.core.Values.SESSION_LAST_TWO_WEEKS;
+import static com.drnoob.datamonitor.core.Values.SESSION_CALENDAR_MONTH;
 import static com.drnoob.datamonitor.core.Values.SESSION_THIS_MONTH;
 import static com.drnoob.datamonitor.core.Values.SESSION_THIS_YEAR;
 import static com.drnoob.datamonitor.core.Values.SESSION_TODAY;
@@ -51,7 +54,11 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -59,6 +66,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -67,6 +76,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.util.Pair;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
@@ -89,11 +99,17 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
+import java.util.ArrayList;
 
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 
 public class AppDataUsageFragment extends Fragment {
     private static final String TAG = AppDataUsageFragment.class.getSimpleName();
@@ -114,6 +130,8 @@ public class AppDataUsageFragment extends Fragment {
     private static String totalDataUsage;
     private static int selectedSession, selectedType;
     private ActivityResultLauncher<Intent> customSessionLauncher;
+    private ActivityResultLauncher<Intent> exportLauncher;
+    private ActivityResultLauncher<String> phonePermissionLauncher;
 
     public static MutableLiveData<Pair<Long, Long>> customFilter = new MutableLiveData<>();
     public static MutableLiveData<String> customFilterDate = new MutableLiveData<>();
@@ -140,6 +158,21 @@ public class AppDataUsageFragment extends Fragment {
                     }
                 }
         );
+        exportLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        writeCsv(result.getData().getData());
+                    }
+                });
+        phonePermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(), granted -> {
+                    if (granted) refreshData();
+                    else {
+                        NetworkStatsHelper.setSelectedSubscription(requireContext(), -1);
+                        android.widget.Toast.makeText(requireContext(), R.string.sim_permission_required,
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 
     @Override
@@ -161,6 +194,7 @@ public class AppDataUsageFragment extends Fragment {
         mDataRefresh = view.findViewById(R.id.refresh_data_usage);
         mEmptyList = view.findViewById(R.id.empty_list);
         mTotalUsage = view.findViewById(R.id.current_session_total);
+        view.findViewById(R.id.export_usage_csv).setOnClickListener(v -> exportCsv());
         mFilter = view.findViewById(R.id.filter_app_usage);
 
         mAdapter = new AppDataUsageAdapter(mList, mContext);
@@ -212,11 +246,44 @@ public class AppDataUsageFragment extends Fragment {
                 if (isDataLoading()) {
                     return;
                 }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                        && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_PHONE_STATE)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE);
+                    return;
+                }
                 BottomSheetDialog dialog = new BottomSheetDialog(getContext(), R.style.BottomSheet);
                 View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.layout_app_usage_filter, null);
 
                 ChipGroup sessionGroup = dialogView.findViewById(R.id.session_group);
                 ChipGroup typeGroup = dialogView.findViewById(R.id.type_group);
+                Spinner simSelector = dialogView.findViewById(R.id.sim_selector);
+                List<Integer> subscriptionIds = new ArrayList<>();
+                List<String> simLabels = new ArrayList<>();
+                simLabels.add(getString(R.string.label_all_sims));
+                subscriptionIds.add(-1);
+                try {
+                    SubscriptionManager subscriptions = (SubscriptionManager) requireContext()
+                            .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                    List<SubscriptionInfo> active = subscriptions.getActiveSubscriptionInfoList();
+                    if (active != null) {
+                        for (SubscriptionInfo info : active) {
+                            CharSequence name = info.getDisplayName();
+                            simLabels.add(name == null || name.length() == 0
+                                    ? getString(R.string.label_sim_slot, info.getSimSlotIndex() + 1)
+                                    : name.toString());
+                            subscriptionIds.add(info.getSubscriptionId());
+                        }
+                    }
+                } catch (SecurityException ignored) {
+                    // Keep the all-SIM option when Android withholds SIM details.
+                }
+                simSelector.setAdapter(new ArrayAdapter<>(requireContext(),
+                        android.R.layout.simple_spinner_dropdown_item, simLabels));
+                int selectedSubscription = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                        .getInt(NetworkStatsHelper.PREF_DATA_USAGE_SUBSCRIPTION, -1);
+                int selectedSimPosition = subscriptionIds.indexOf(selectedSubscription);
+                simSelector.setSelection(Math.max(selectedSimPosition, 0));
 
                 ConstraintLayout footer = dialogView.findViewById(R.id.footer);
                 TextView cancel = footer.findViewById(R.id.cancel);
@@ -288,6 +355,18 @@ public class AppDataUsageFragment extends Fragment {
                         sessionGroup.check(R.id.session_this_month);
                         break;
 
+                    case SESSION_LAST_WEEK:
+                        sessionGroup.check(R.id.session_last_week);
+                        break;
+
+                    case SESSION_LAST_TWO_WEEKS:
+                        sessionGroup.check(R.id.session_last_two_weeks);
+                        break;
+
+                    case SESSION_CALENDAR_MONTH:
+                        sessionGroup.check(R.id.session_calendar_month);
+                        break;
+
                     case SESSION_LAST_MONTH:
                         sessionGroup.check(R.id.session_last_month);
                         break;
@@ -339,6 +418,18 @@ public class AppDataUsageFragment extends Fragment {
                                 selectedSession = SESSION_THIS_MONTH;
                                 break;
 
+                            case R.id.session_last_week:
+                                selectedSession = SESSION_LAST_WEEK;
+                                break;
+
+                            case R.id.session_last_two_weeks:
+                                selectedSession = SESSION_LAST_TWO_WEEKS;
+                                break;
+
+                            case R.id.session_calendar_month:
+                                selectedSession = SESSION_CALENDAR_MONTH;
+                                break;
+
                             case R.id.session_last_month:
                                 selectedSession = SESSION_LAST_MONTH;
                                 break;
@@ -378,7 +469,20 @@ public class AppDataUsageFragment extends Fragment {
                                 break;
                         }
 
-                        if (!MainActivity.isDataLoading()) {
+                        int selectedSubscription = subscriptionIds.get(simSelector.getSelectedItemPosition());
+                        NetworkStatsHelper.setSelectedSubscription(requireContext(), selectedSubscription);
+
+                        if (selectedSubscription >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                                && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_PHONE_STATE)
+                                != PackageManager.PERMISSION_GRANTED) {
+                            phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE);
+                        }
+                        else if (selectedSubscription >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            android.widget.Toast.makeText(requireContext(), R.string.sim_stats_android_restriction,
+                                    android.widget.Toast.LENGTH_LONG).show();
+                            if (!MainActivity.isDataLoading()) refreshData();
+                        }
+                        else if (!MainActivity.isDataLoading()) {
                             refreshData();
                         }
                         dialog.dismiss();
@@ -535,6 +639,40 @@ public class AppDataUsageFragment extends Fragment {
             totalUsage = context.getString(R.string.label_unknown);
         }
         return totalUsage;
+    }
+
+    private void exportCsv() {
+        if (isDataLoading()) return;
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/csv");
+        intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.export_usage_filename));
+        exportLauncher.launch(intent);
+    }
+
+    private void writeCsv(Uri uri) {
+        if (uri == null) return;
+        try (OutputStream stream = requireContext().getContentResolver().openOutputStream(uri);
+             OutputStreamWriter writer = new OutputStreamWriter(stream, StandardCharsets.UTF_8)) {
+            writer.write("App,Package,Sent bytes,Received bytes,Total bytes\r\n");
+            List<AppDataUsageModel> rows = new ArrayList<>();
+            rows.addAll(mUserAppsList);
+            rows.addAll(mSystemAppsList);
+            for (AppDataUsageModel row : rows) {
+                long sent = getType() == TYPE_WIFI ? row.getSentWifi() : row.getSentMobile();
+                long received = getType() == TYPE_WIFI ? row.getReceivedWifi() : row.getReceivedMobile();
+                writer.write(csvCell(row.getAppName()) + "," + csvCell(row.getPackageName()) + ","
+                        + sent + "," + received + "," + (sent + received) + "\r\n");
+            }
+            writer.flush();
+        } catch (Exception e) {
+            Log.e(TAG, "Unable to export usage CSV", e);
+        }
+    }
+
+    private static String csvCell(String value) {
+        if (value == null) return "\"\"";
+        return "\"" + value.replace("\"", "\"\"") + "\"";
     }
 
     public static int getSession() {

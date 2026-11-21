@@ -49,6 +49,9 @@ public class Values {
     public static final int SESSION_MONTHLY = 0x00A9;
     public static final int SESSION_CUSTOM = 0x00AC;
     public static final int SESSION_CUSTOM_FILTER = 0x00AF;
+    public static final int SESSION_LAST_WEEK = 0x00B0;
+    public static final int SESSION_LAST_TWO_WEEKS = 0x00B1;
+    public static final int SESSION_CALENDAR_MONTH = 0x00B2;
 
     public static final int TYPE_MOBILE_DATA = 0x0046;
     public static final int TYPE_WIFI = 0x0050;
