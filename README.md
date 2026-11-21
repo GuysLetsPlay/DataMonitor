@@ -1,86 +1,44 @@
-[![Version](https://shields.io/badge/version-v2.4.0-087AFF.svg)](https://github.com/itsdrnoob/DataMonitor/tree/dev/2.4.0)
-[![Platform](https://shields.io/badge/platform-android-green.svg)](https://github.com/itsdrnoob/DataMonitor)
-[![License](https://img.shields.io/badge/license-GPL3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
-[![Release](https://shields.io/badge/release-v2.4.0-blue.svg)](https://github.com/itsdrnoob/DataMonitor/releases)
-[![Chat](https://img.shields.io/badge/Telegram%20Chat-blue?logo=telegram)](https://t.me/datamonitor)
-[![Downloads](https://img.shields.io/github/downloads/itsdrnoob/DataMonitor/total)](https://github.com/itsdrnoob/DataMonitor/releases)
+# Android Data Usage Tracker
 
-<div align="center">
-<img src="https://raw.githubusercontent.com/itsdrnoob/DataMonitor/master/images/icon.png" width="20%" height="20%"></img>
+[![Build APK](https://github.com/GuysLetsPlay/DataMonitor/actions/workflows/build-apk.yml/badge.svg)](https://github.com/GuysLetsPlay/DataMonitor/actions/workflows/build-apk.yml) [![Latest release](https://img.shields.io/github/v/release/GuysLetsPlay/DataMonitor?display_name=tag)](https://github.com/GuysLetsPlay/DataMonitor/releases/latest) [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-# Data Monitor
-## GuysLetsPlay fork: data usage options
+Open-source Android data usage tracker for mobile and Wi-Fi. This GPLv3 fork of [Data Monitor](https://github.com/itsdrnoob/DataMonitor) adds home-screen date and network controls, SIM selection, and CSV export.
 
-This fork adds 7-day and 14-day ranges, a calendar-month range, a SIM selector, and CSV export from the app usage screen. Existing custom date ranges, billing month, all-SIM mobile data, and Wi-Fi views remain available.
-
-The SIM selector needs Android phone permission. Android 10 and newer restrict per-SIM subscriber statistics to system and carrier apps on many devices; when the device blocks that access, use All SIMs. The app's total mobile view uses Android's device-wide mobile usage counters.
-
-Download the latest APK from [Releases](https://github.com/GuysLetsPlay/DataMonitor/releases/latest). This fork builds a debug-signed APK with GitHub Actions. Android may ask you to allow installation from your browser or file manager.
-
-Track all your data usage - at one place
-</div>
+**Download:** [Get the latest APK](https://github.com/GuysLetsPlay/DataMonitor/releases/latest/download/app-debug.apk) · [Browse all releases](https://github.com/GuysLetsPlay/DataMonitor/releases)
 
 ## Features
-- Track daily data usage
-- App-wise data usage stats
-- Stats for different time period (last month, this year, all time etc).
-- Mobile data as well as Wifi usage stats
-- Weekly data usage overview
-- Data Monitor widget and notification
-- Data usage alert
-- Custom mobile data reset time
-- Network diagnostics
-- Live network speed monitor
-- App usage time
-- No ads or In-app purchases
-- Light-weight and Open Source
 
-## Screenshots
-![Home Part 1](https://github.com/itsdrnoob/DataMonitor/blob/HEAD/images/ss_part_1.png)<br><br>
-![Home Part 2](https://github.com/itsdrnoob/DataMonitor/blob/HEAD/images/ss_part_2.png)
-<br><br>
+- View total usage for the **last 7 days**, **last 14 days**, **month to date**, or a **custom date range**.
+- See the exact start and end dates used by the total. Tap the date selector to choose a range.
+- Choose **mobile + Wi-Fi**, **mobile only**, or **Wi-Fi only**.
+- Choose **all SIMs** or an active SIM when Android exposes per-SIM statistics.
+- Export the app usage breakdown to **CSV**.
+- Also includes Data Monitor's weekly chart, per-app usage, billing-cycle tracking, alerts, and widgets.
 
-## Download
-[<img alt="Get it on Google Play" height="85" src="./images/google-play-badge.png">](https://play.google.com/store/apps/details?id=com.drnoob.datamonitor)<br><br>
-[<img alt="Get it on F-Droid" height="85" src="./images/f-droid-badge.png">](https://f-droid.org/packages/com.drnoob.datamonitor/)<br><br>
-Or check <a href = "https://github.com/itsdrnoob/DataMonitor/releases/latest">releases</a>
+## Install on Android
 
-## Changelog
-View the complete changelog <a href = "CHANGELOG.md">here</a>
+1. Download `app-debug.apk` from the [latest release](https://github.com/GuysLetsPlay/DataMonitor/releases/latest).
+2. Open the downloaded file. Allow installs from your browser or file manager if Android asks.
+3. Open Data Monitor and grant **Usage access**. Android requires this special access to read network usage statistics.
+4. Use the home tab to select a period, date range, network scope, and SIM.
 
-## Support
-If you found the app useful, please consider starring and/or forking the repo. 🌟<br>
-If you would like to support the development of the app, a donation would be greatly appreciated. 💵<br>
-You can donate in the following ways:
-- [PayPal](https://paypal.me/itsdrnoob)
-- <a href="https://buymeacoffee.com/itsdrnoob">Buy Me A Coffee</a>
-- UPI: `itsdrnoob@ybl`
-- Bitcoin: `3MS2NP6ptS7XQytdn5yCAQgotVtXBQL1xw`
-- Etherium: `0x820f316f75dacf5606b49bd33dfcf7e7142d59a5`
-- Litecoin: `MQBVqLUpHLs2KUi8gTrhQkicpQVkohaccB`
-- Monero: `82xMyK4P174QrEkkAcpEcq4AsREGqYDgpUbdmFRpNQRjaPR3DNJGZcQCA3Vp2PFNJnUEHzWBRdPzLfKF827z2WyuCLoTGyo`
+This fork's APK is debug-signed by GitHub Actions. Android may not install it as an update over a copy signed differently. If Android reports a signature conflict, uninstall the existing copy first; uninstalling can remove its local settings and history.
 
-## Telegram support
-Cick <a href="https://t.me/datamonitor">here</a> to join the telegram support chat. If that didn't work try searching for <code>@datamonitor</code> in telegram instead.
+## SIM usage limitation
 
-## Beta Builds
-Beta builds for Data Monitor will be available on Play Store and <a href="https://t.me/datamonitor">Telegram</a>.<br>
-Join the Beta program on:<br>
-<a href="https://play.google.com/store/apps/details?id=com.drnoob.datamonitor">Google Play</a><br>
-<a href="https://play.google.com/apps/testing/com.drnoob.datamonitor">Web</a><br>
-Latest Beta: <a href="https://github.com/itsdrnoob/DataMonitor/tree/dev/2.4.0">v2.4.0-Beta2</a>
+Android 10 and newer can restrict per-SIM network statistics to system or carrier apps. On affected devices, a selected SIM may fall back to the all-SIM total. The app explains this limitation. All-SIM mobile totals use Android's device-level counters.
 
-## Roadmap
-Checkout upcoming feautures and enhancements to the project in the [Project Roadmap.](ROADMAP.md)
+## Privacy
 
-## License
-Check app license <a href = "LICENSE">here</a>
+Usage totals are read on the device through Android's Usage Stats APIs and do not require an account or a remote data service. Data Monitor also includes optional online features such as network diagnostics; see the [source code](https://github.com/GuysLetsPlay/DataMonitor) and Android permissions for details.
 
-## Contribute
-Click <a href = "CONTRIBUTING.md">here</a> to learn how to contribute.
+## Source and license
 
-## XDA Thread
-Check xda thread <a href = "https://forum.xda-developers.com/t/app-v1-0-data-monitor-track-all-your-data-usage-at-one-place.4356129/">here</a>.
+This project is based on [Data Monitor by Dr.NooB](https://github.com/itsdrnoob/DataMonitor) and licensed under the [GNU GPLv3](LICENSE). This fork adds home-screen period and SIM controls, explicit date selection, CSV export, and automated APK releases.
 
-## NOTE
-Play store release differs in signature with Github and other releases. This means that if you have apk from Github or AFH installed, you won't be able to update directly from Play store. If you have the Github variant installed and want to use Playstore one, you have to uninstall the app and reinstall from Playstore.
+- [Browse source code](https://github.com/GuysLetsPlay/DataMonitor/tree/release/2.4.0)
+- [Download the APK](https://github.com/GuysLetsPlay/DataMonitor/releases/latest)
+- [Report a bug](https://github.com/GuysLetsPlay/DataMonitor/issues)
+- [View APK build history](https://github.com/GuysLetsPlay/DataMonitor/actions/workflows/build-apk.yml)
+
+Search terms: Android data usage tracker, Android mobile data monitor, SIM data usage, weekly data usage, monthly data usage, custom date range, Wi-Fi usage, CSV export.
