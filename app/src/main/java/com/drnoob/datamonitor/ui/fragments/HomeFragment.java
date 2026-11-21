@@ -71,6 +71,8 @@ import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.Gravity;
@@ -169,6 +171,9 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
     private int selectedHomeScope = 0;
     private final List<Integer> homeSubscriptionIds = new ArrayList<>();
     private ActivityResultLauncher<String> homePhonePermissionLauncher;
+    private AsyncTask<Void, Void, Long> homeUsageTask;
+    private int homeUsageRequestId;
+    private final Handler homeUsageHandler = new Handler(Looper.getMainLooper());
 
     private SharedPreferences preferences;
 
@@ -270,6 +275,7 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         mUsageScope = view.findViewById(R.id.home_usage_scope);
         mUsageSim = view.findViewById(R.id.home_usage_sim);
         setupHomeUsageFilters(view);
+        mSelectedUsageTotal.setOnClickListener(v -> updateSelectedUsageTotal());
 
         mOverview = view.findViewById(R.id.overview);
         mOverviewLoading = view.findViewById(R.id.overview_loading);
@@ -766,9 +772,18 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         mSelectedUsageTotal.setText(R.string.home_selected_total_loading);
         final int session = selectedHomeSession;
         final int scope = selectedHomeScope;
+        final int requestId = ++homeUsageRequestId;
         final Context context = requireContext().getApplicationContext();
         final long[] range = getHomeRangeBounds(session);
-        new AsyncTask<Void, Void, Long>() {
+        if (homeUsageTask != null) homeUsageTask.cancel(true);
+        final Runnable timeout = () -> {
+            if (requestId == homeUsageRequestId && isAdded() && mSelectedUsageTotal != null) {
+                mSelectedUsageTotal.setText(R.string.home_selected_total_timeout);
+                if (homeUsageTask != null) homeUsageTask.cancel(true);
+            }
+        };
+        homeUsageHandler.postDelayed(timeout, 15000);
+        homeUsageTask = new AsyncTask<Void, Void, Long>() {
             @Override protected Long doInBackground(Void... values) {
                 long total = 0;
                 try {
@@ -780,14 +795,19 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Unable to load selected period usage", e);
+                    return null;
                 }
                 return total;
             }
             @Override protected void onPostExecute(Long total) {
+                homeUsageHandler.removeCallbacks(timeout);
                 if (!isAdded() || mSelectedUsageTotal == null) return;
+                if (requestId != homeUsageRequestId) return;
                 if (selectedHomeSession != session || selectedHomeScope != scope) return;
-                long[] currentRange = getHomeRangeBounds(session);
-                if (currentRange[0] != range[0] || currentRange[1] != range[1]) return;
+                if (total == null) {
+                    mSelectedUsageTotal.setText(R.string.home_selected_total_error);
+                    return;
+                }
                 String rangeLabel = session == SESSION_CUSTOM_FILTER ? getString(R.string.home_range_custom)
                         : session == SESSION_CALENDAR_MONTH
                         ? getString(R.string.home_range_month)
@@ -798,7 +818,24 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
                 mSelectedUsageTotal.setText(getString(R.string.home_selected_total,
                         rangeLabel + " / " + scopeLabel, formatData(total / 2, total / 2)[2]));
             }
-        }.execute();
+        };
+        homeUsageTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+    }
+
+    @Override
+    public void onDestroyView() {
+        homeUsageRequestId++;
+        homeUsageHandler.removeCallbacksAndMessages(null);
+        if (homeUsageTask != null) {
+            homeUsageTask.cancel(true);
+            homeUsageTask = null;
+        }
+        mSelectedUsageTotal = null;
+        mSelectedDateRange = null;
+        mHomeSimUsageNote = null;
+        mUsageScope = null;
+        mUsageSim = null;
+        super.onDestroyView();
     }
 
     private long[] getHomeRangeBounds(int session) {

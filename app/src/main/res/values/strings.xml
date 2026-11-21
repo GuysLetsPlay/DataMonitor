@@ -43,6 +43,8 @@
     <string name="home_date_picker_title">Choose usage dates</string>
     <string name="home_scope_all">Mobile + Wi-Fi</string>
     <string name="home_selected_total_loading">Loading selected period total</string>
+    <string name="home_selected_total_error">Usage could not load. Tap here to retry.</string>
+    <string name="home_selected_total_timeout">Usage is taking too long. Tap here to retry.</string>
     <string name="home_selected_total">%1$s - %2$s total</string>
     <string name="home_enable_sim_selection">Grant permission for SIM choices</string>
     <string name="home_sim_usage_note">Android 10 and newer may limit SIM-specific totals. If blocked, the total falls back to all SIMs.</string>
