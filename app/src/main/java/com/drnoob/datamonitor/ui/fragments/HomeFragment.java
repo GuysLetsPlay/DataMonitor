@@ -660,10 +660,15 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         populateHomeSims();
 
         ChipGroup timeframeGroup = view.findViewById(R.id.home_timeframe_group);
+        selectedHomeSession = preferences.getInt("home_usage_timeframe", SESSION_LAST_WEEK);
+        timeframeGroup.check(selectedHomeSession == SESSION_CALENDAR_MONTH ? R.id.home_timeframe_month
+                : selectedHomeSession == SESSION_LAST_TWO_WEEKS ? R.id.home_timeframe_two_weeks
+                : R.id.home_timeframe_week);
         timeframeGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             int id = group.getCheckedChipId();
             selectedHomeSession = id == R.id.home_timeframe_month ? SESSION_CALENDAR_MONTH
                     : id == R.id.home_timeframe_two_weeks ? SESSION_LAST_TWO_WEEKS : SESSION_LAST_WEEK;
+            preferences.edit().putInt("home_usage_timeframe", selectedHomeSession).apply();
             updateSelectedUsageTotal();
         });
         mUsageScope.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
