@@ -682,8 +682,14 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         mUsageSim.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> parent, View row, int position, long id) {
                 if (position < homeSubscriptionIds.size()) {
-                    NetworkStatsHelper.setSelectedSubscription(requireContext(), homeSubscriptionIds.get(position));
-                    updateSelectedUsageTotal();
+                    int subscriptionId = homeSubscriptionIds.get(position);
+                    if (subscriptionId == -2 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        homePhonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE);
+                        mUsageSim.setSelection(0);
+                    } else {
+                        NetworkStatsHelper.setSelectedSubscription(requireContext(), subscriptionId);
+                        updateSelectedUsageTotal();
+                    }
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     homePhonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE);
                 }
