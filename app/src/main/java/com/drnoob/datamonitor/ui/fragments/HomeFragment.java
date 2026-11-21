@@ -47,6 +47,7 @@ import static com.drnoob.datamonitor.core.Values.SESSION_MONTHLY;
 import static com.drnoob.datamonitor.core.Values.SESSION_LAST_WEEK;
 import static com.drnoob.datamonitor.core.Values.SESSION_LAST_TWO_WEEKS;
 import static com.drnoob.datamonitor.core.Values.SESSION_CALENDAR_MONTH;
+import static com.drnoob.datamonitor.core.Values.SESSION_CUSTOM_FILTER;
 import static com.drnoob.datamonitor.core.Values.SESSION_TODAY;
 import static com.drnoob.datamonitor.core.Values.SHOW_ADD_PLAN_BANNER;
 import static com.drnoob.datamonitor.core.Values.TYPE_MOBILE_DATA;
@@ -94,6 +95,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.util.Pair;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
@@ -111,16 +113,21 @@ import com.drnoob.datamonitor.utils.NetworkStatsHelper;
 import com.drnoob.datamonitor.utils.VibrationUtils;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.snackbar.Snackbar;
 import com.skydoves.progressview.ProgressView;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.text.ParseException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 
 public class HomeFragment extends Fragment implements View.OnLongClickListener {
@@ -156,6 +163,7 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
     private TextView mPlanDetailsTitle, mPlanUsage, mPlanValidity, mDailyQuota;
     private TextView mSelectedUsageTotal;
     private TextView mHomeSimUsageNote;
+    private MaterialButton mSelectedDateRange;
     private Spinner mUsageScope, mUsageSim;
     private int selectedHomeSession = SESSION_LAST_WEEK;
     private int selectedHomeScope = 0;
@@ -258,6 +266,7 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         mDailyQuota = view.findViewById(R.id.daily_quota);
         mSelectedUsageTotal = view.findViewById(R.id.home_selected_usage_total);
         mHomeSimUsageNote = view.findViewById(R.id.home_sim_usage_note);
+        mSelectedDateRange = view.findViewById(R.id.home_selected_date_range);
         mUsageScope = view.findViewById(R.id.home_usage_scope);
         mUsageSim = view.findViewById(R.id.home_usage_sim);
         setupHomeUsageFilters(view);
@@ -647,6 +656,7 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         super.onResume();
         updateData();
         updateDataBalance();
+        updateHomeDateRangeLabel();
         updateSelectedUsageTotal();
     }
 
@@ -656,6 +666,7 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         scopeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mUsageScope.setAdapter(scopeAdapter);
         int savedScope = preferences.getInt("home_usage_scope", 0);
+        selectedHomeScope = savedScope;
         mUsageScope.setSelection(savedScope);
         populateHomeSims();
 
@@ -663,14 +674,22 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         selectedHomeSession = preferences.getInt("home_usage_timeframe", SESSION_LAST_WEEK);
         timeframeGroup.check(selectedHomeSession == SESSION_CALENDAR_MONTH ? R.id.home_timeframe_month
                 : selectedHomeSession == SESSION_LAST_TWO_WEEKS ? R.id.home_timeframe_two_weeks
+                : selectedHomeSession == SESSION_CUSTOM_FILTER ? R.id.home_timeframe_custom
                 : R.id.home_timeframe_week);
         timeframeGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             int id = group.getCheckedChipId();
+            if (id == R.id.home_timeframe_custom) {
+                if (selectedHomeSession != SESSION_CUSTOM_FILTER) openHomeDateRangePicker();
+                return;
+            }
             selectedHomeSession = id == R.id.home_timeframe_month ? SESSION_CALENDAR_MONTH
                     : id == R.id.home_timeframe_two_weeks ? SESSION_LAST_TWO_WEEKS : SESSION_LAST_WEEK;
             preferences.edit().putInt("home_usage_timeframe", selectedHomeSession).apply();
+            updateHomeDateRangeLabel();
             updateSelectedUsageTotal();
         });
+        mSelectedDateRange.setOnClickListener(v -> openHomeDateRangePicker());
+        updateHomeDateRangeLabel();
         mUsageScope.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> parent, View row, int position, long id) {
                 selectedHomeScope = position;
@@ -748,16 +767,16 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
         final int session = selectedHomeSession;
         final int scope = selectedHomeScope;
         final Context context = requireContext().getApplicationContext();
-        final int resetDate = preferences.getInt(DATA_RESET_DATE, 1);
+        final long[] range = getHomeRangeBounds(session);
         new AsyncTask<Void, Void, Long>() {
             @Override protected Long doInBackground(Void... values) {
                 long total = 0;
                 try {
                     if (scope != 2) {
-                        total += getDeviceMobileDataUsage(context, session, resetDate)[2];
+                        total += NetworkStatsHelper.getDeviceMobileDataUsage(context, range[0], range[1])[2];
                     }
                     if (scope != 1) {
-                        total += getDeviceWifiDataUsage(context, session)[2];
+                        total += NetworkStatsHelper.getDeviceWifiDataUsage(context, range[0], range[1])[2];
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Unable to load selected period usage", e);
@@ -767,16 +786,103 @@ public class HomeFragment extends Fragment implements View.OnLongClickListener {
             @Override protected void onPostExecute(Long total) {
                 if (!isAdded() || mSelectedUsageTotal == null) return;
                 if (selectedHomeSession != session || selectedHomeScope != scope) return;
-                String range = session == SESSION_CALENDAR_MONTH
+                long[] currentRange = getHomeRangeBounds(session);
+                if (currentRange[0] != range[0] || currentRange[1] != range[1]) return;
+                String rangeLabel = session == SESSION_CUSTOM_FILTER ? getString(R.string.home_range_custom)
+                        : session == SESSION_CALENDAR_MONTH
                         ? getString(R.string.home_range_month)
                         : session == SESSION_LAST_TWO_WEEKS
                         ? getString(R.string.home_range_two_weeks) : getString(R.string.home_range_week);
                 String scopeLabel = getString(scope == 1 ? R.string.label_mobile_data
                         : scope == 2 ? R.string.label_wifi : R.string.home_scope_all);
                 mSelectedUsageTotal.setText(getString(R.string.home_selected_total,
-                        range + " · " + scopeLabel, formatData(total / 2, total / 2)[2]));
+                        rangeLabel + " / " + scopeLabel, formatData(total / 2, total / 2)[2]));
             }
         }.execute();
+    }
+
+    private long[] getHomeRangeBounds(int session) {
+        if (session == SESSION_CUSTOM_FILTER) {
+            long start = preferences.getLong("home_custom_range_start", -1L);
+            long end = preferences.getLong("home_custom_range_end", -1L);
+            if (start > 0 && end >= start) return new long[]{start, end};
+        }
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        if (session == SESSION_LAST_WEEK) calendar.add(Calendar.DAY_OF_YEAR, -6);
+        else if (session == SESSION_LAST_TWO_WEEKS) calendar.add(Calendar.DAY_OF_YEAR, -13);
+        else if (session == SESSION_CALENDAR_MONTH) calendar.set(Calendar.DAY_OF_MONTH, 1);
+        return new long[]{calendar.getTimeInMillis(), System.currentTimeMillis()};
+    }
+
+    private void updateHomeDateRangeLabel() {
+        if (mSelectedDateRange == null || !isAdded()) return;
+        long[] range = getHomeRangeBounds(selectedHomeSession);
+        DateFormat format = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault());
+        String start = format.format(range[0]);
+        String end = format.format(selectedHomeSession == SESSION_CUSTOM_FILTER ? range[1] - 1 : range[1]);
+        mSelectedDateRange.setText(getString(R.string.home_date_range_value, start, end));
+        mSelectedDateRange.setContentDescription(getString(R.string.home_date_range_accessibility, start, end));
+    }
+
+    private void openHomeDateRangePicker() {
+        if (!isAdded()) return;
+        long[] range = getHomeRangeBounds(selectedHomeSession);
+        CalendarConstraints constraints = new CalendarConstraints.Builder()
+                .setEnd(localMillisToUtcDate(System.currentTimeMillis()))
+                .build();
+        MaterialDatePicker<Pair<Long, Long>> picker = MaterialDatePicker.Builder.dateRangePicker()
+                .setTitleText(R.string.home_date_picker_title)
+                .setCalendarConstraints(constraints)
+                .setSelection(new Pair<>(localMillisToUtcDate(range[0]), localMillisToUtcDate(range[1])))
+                .build();
+        picker.addOnPositiveButtonClickListener(selection -> {
+            long start = pickerDateToLocalStart(selection.first);
+            Calendar endCalendar = Calendar.getInstance();
+            endCalendar.setTimeInMillis(pickerDateToLocalStart(selection.second));
+            endCalendar.add(Calendar.DAY_OF_MONTH, 1);
+            long end = endCalendar.getTimeInMillis();
+            preferences.edit()
+                    .putLong("home_custom_range_start", start)
+                    .putLong("home_custom_range_end", end)
+                    .putInt("home_usage_timeframe", SESSION_CUSTOM_FILTER)
+                    .apply();
+            selectedHomeSession = SESSION_CUSTOM_FILTER;
+            ((ChipGroup) requireView().findViewById(R.id.home_timeframe_group))
+                    .check(R.id.home_timeframe_custom);
+            updateHomeDateRangeLabel();
+            updateSelectedUsageTotal();
+        });
+        picker.addOnDismissListener(dialog -> {
+            if (selectedHomeSession != SESSION_CUSTOM_FILTER && isAdded()) {
+                ChipGroup group = requireView().findViewById(R.id.home_timeframe_group);
+                group.check(selectedHomeSession == SESSION_CALENDAR_MONTH ? R.id.home_timeframe_month
+                        : selectedHomeSession == SESSION_LAST_TWO_WEEKS ? R.id.home_timeframe_two_weeks
+                        : R.id.home_timeframe_week);
+            }
+        });
+        picker.show(getParentFragmentManager(), "home-date-range");
+    }
+
+    private long pickerDateToLocalStart(long utcDateMillis) {
+        Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        utc.setTimeInMillis(utcDateMillis);
+        Calendar local = Calendar.getInstance();
+        local.clear();
+        local.set(utc.get(Calendar.YEAR), utc.get(Calendar.MONTH), utc.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
+        return local.getTimeInMillis();
+    }
+
+    private long localMillisToUtcDate(long localMillis) {
+        Calendar local = Calendar.getInstance();
+        local.setTimeInMillis(localMillis);
+        Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        utc.clear();
+        utc.set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH));
+        return utc.getTimeInMillis();
     }
 
     @Override

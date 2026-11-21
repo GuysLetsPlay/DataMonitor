@@ -455,7 +455,28 @@
                         android:text="@string/home_range_month"
                         app:chipCornerRadius="@dimen/radius_large"
                         app:chipStrokeWidth="0dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/home_timeframe_custom"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_default"
+                        android:text="@string/home_range_custom"
+                        app:chipCornerRadius="@dimen/radius_large"
+                        app:chipStrokeWidth="0dp" />
                 </com.google.android.material.chip.ChipGroup>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/home_selected_date_range"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/margin_mid_large"
+                    android:layout_marginTop="@dimen/margin_small"
+                    android:layout_marginEnd="@dimen/margin_mid_large"
+                    android:gravity="start|center_vertical"
+                    android:text="@string/home_date_range_loading"
+                    app:layout_constraintTop_toBottomOf="@id/home_timeframe_group" />
 
                 <LinearLayout
                     android:id="@+id/home_usage_filters"
@@ -466,7 +487,7 @@
                     android:layout_marginEnd="@dimen/margin_mid_large"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    app:layout_constraintTop_toBottomOf="@id/home_timeframe_group">
+                    app:layout_constraintTop_toBottomOf="@id/home_selected_date_range">
 
                     <Spinner
                         android:id="@+id/home_usage_scope"

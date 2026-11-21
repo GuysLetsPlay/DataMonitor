@@ -240,6 +240,26 @@ public class NetworkStatsHelper {
         return data;
     }
 
+    public static Long[] getDeviceMobileDataUsage(Context context, long startTimeMillis, long endTimeMillis)
+            throws RemoteException {
+        NetworkStatsManager manager = (NetworkStatsManager) context.getSystemService(Context.NETWORK_STATS_SERVICE);
+        NetworkStats.Bucket bucket = manager.querySummaryForDevice(ConnectivityManager.TYPE_MOBILE,
+                getSubscriberId(context), startTimeMillis, endTimeMillis);
+        long sent = bucket.getTxBytes();
+        long received = bucket.getRxBytes();
+        return new Long[]{sent, received, sent + received};
+    }
+
+    public static Long[] getDeviceWifiDataUsage(Context context, long startTimeMillis, long endTimeMillis)
+            throws RemoteException {
+        NetworkStatsManager manager = (NetworkStatsManager) context.getSystemService(Context.NETWORK_STATS_SERVICE);
+        NetworkStats.Bucket bucket = manager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI,
+                getWifiSubscriberId(context), startTimeMillis, endTimeMillis);
+        long sent = bucket.getTxBytes();
+        long received = bucket.getRxBytes();
+        return new Long[]{sent, received, sent + received};
+    }
+
     public static Long[] getTotalAppWifiDataUsage(Context context, int session) throws ParseException, RemoteException {
         Long[] data;
         Long resetTimeMillis = getTimePeriod(context, session, 1)[0];
